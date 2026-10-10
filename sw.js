@@ -2,6 +2,7 @@ const CACHE_NAME = "acreditador-fcad-v1";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
+  "./manifest.json",
   "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap",
   "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"
 ];
