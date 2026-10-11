@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Mesa de Acreditación Offline</title>
+  <title>Acreditación Offline</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -866,7 +866,7 @@
           mostrarMensaje(`Padrón cargado (${nombreEventoActivo}): ${incorporados} inscriptos agregados.`, "ok");
         }
       };
-      reader.readAsText(file);
+      reader.readAsText(file, "UTF-8");
       event.target.value = "";
     }
 
