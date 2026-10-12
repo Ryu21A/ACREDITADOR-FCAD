@@ -451,33 +451,37 @@
       if (subtituloEvento) subtituloEvento.innerText = `⚡ ${nombreEventoActivo}`;
     }
 
-    function confirmarNuevoEvento() {
-      const codigo = window.prompt(
-        "⚠️ ATENCIÓN: esta acción borra TODOS los datos de acreditación guardados " +
-        "en este dispositivo para este evento (padrón cargado, entradas y salidas registradas) y " +
-        "NO se puede deshacer.\n\n" +
-        "Usalo solo al empezar un evento nuevo, después de haber exportado el CSV " +
-        "del evento anterior.\n\n" +
-        "Para confirmar que estás seguro, escribí el código 2121:"
-      );
-      if (codigo === null) return;
-      if (codigo.trim() !== "2121") {
-        mostrarMensaje("Código incorrecto. No se borró ningún dato.", "alerta");
-        return;
-      }
-      localStorage.removeItem(STORAGE_KEY);
-      padron = {};
-      actualizarMetricasUI();
-      mostrarMensaje("Dispositivo reiniciado para este evento.", "ok");
-    }
+function confirmarNuevoEvento() {
+  const codigo = window.prompt(
+    "⚠️ ATENCIÓN: esta acción descargará una copia de seguridad final y " +
+    "borrará TODOS los datos de acreditación guardados en este dispositivo " +
+    "(padrón cargado, asistencias de este evento y de eventos anteriores).\n\n" +
+    "Para confirmar el cierre y reinicio a cero, escribí el código 2121:"
+  );
+  if (codigo === null) return; // canceló el cuadro de diálogo
+  if (codigo.trim() !== "2121") {
+    mostrarMensaje("Código incorrecto. No se borró ningún dato.", "alerta");
+    return;
+  }
 
-    function getAudioCtx() {
-      if (!audioCtx) {
-        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } 
-        catch (e) { return null; }
-      }
-      return audioCtx;
-    }
+  // 1. Descarga obligatoria y automática de seguridad si hay datos cargados
+  if (Object.keys(padron).length > 0) {
+    exportarCsvAsistencia(false);
+  }
+
+  // 2. Purga total del almacenamiento local del navegador
+  localStorage.clear();
+
+  // 3. Reseteo completo del estado en memoria y la interfaz
+  padron = {};
+  cambiosDesdeUltimoRespaldo = 0;
+  if (ultimoRespaldo) ultimoRespaldo.innerText = "";
+  if (tituloEvento) tituloEvento.innerText = "Mesa de Acreditación";
+  if (subtituloEvento) subtituloEvento.innerText = "⚡ Sin padrón cargado";
+
+  actualizarMetricasUI();
+  mostrarMensaje("Copia final descargada y dispositivo reiniciado a cero.", "ok");
+}
 
     function playBeep(tipo) {
       const ctx = getAudioCtx();
