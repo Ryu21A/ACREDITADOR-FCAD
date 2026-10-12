@@ -452,35 +452,52 @@
     }
 
 function confirmarNuevoEvento() {
+  const hayDatos = padron && Object.keys(padron).length > 0;
+
   const codigo = window.prompt(
-    "⚠️ ATENCIÓN: esta acción descargará una copia de seguridad final y " +
-    "borrará TODOS los datos de acreditación guardados en este dispositivo " +
-    "(padrón cargado, asistencias de este evento y de eventos anteriores).\n\n" +
+    "⚠️ ATENCIÓN: esta acción descargará una copia de seguridad final (si hay datos) y " +
+    "borrará TODOS los datos guardados en este dispositivo.\n\n" +
     "Para confirmar el cierre y reinicio a cero, escribí el código 2121:"
   );
-  if (codigo === null) return; // canceló el cuadro de diálogo
+  if (codigo === null) return;
   if (codigo.trim() !== "2121") {
     mostrarMensaje("Código incorrecto. No se borró ningún dato.", "alerta");
     return;
   }
 
-  // 1. Descarga obligatoria y automática de seguridad si hay datos cargados
-  if (Object.keys(padron).length > 0) {
+  // 1. Si hay registros, forzamos la descarga del CSV final
+  if (hayDatos) {
     exportarCsvAsistencia(false);
   }
 
-  // 2. Purga total del almacenamiento local del navegador
-  localStorage.clear();
+  // 2. Damos un respiro de 300ms para asegurar que el navegador registre la descarga
+  setTimeout(() => {
+    // Purga absoluta del almacenamiento
+    localStorage.clear();
 
-  // 3. Reseteo completo del estado en memoria y la interfaz
-  padron = {};
-  cambiosDesdeUltimoRespaldo = 0;
-  if (ultimoRespaldo) ultimoRespaldo.innerText = "";
-  if (tituloEvento) tituloEvento.innerText = "Mesa de Acreditación";
-  if (subtituloEvento) subtituloEvento.innerText = "⚡ Sin padrón cargado";
+    // Reseteo de variables en memoria
+    padron = {};
+    cambiosDesdeUltimoRespaldo = 0;
+    nombreEventoActivo = "Mesa de Acreditación";
+    STORAGE_KEY = "fcad_acreditacion_db_v2::evento_general";
 
-  actualizarMetricasUI();
-  mostrarMensaje("Copia final descargada y dispositivo reiniciado a cero.", "ok");
+    // Reseteo visual inmediato en pantalla
+    if (tituloEvento) tituloEvento.innerText = "Mesa de Acreditación";
+    if (subtituloEvento) {
+      subtituloEvento.innerText = "⚡ Sin padrón cargado";
+      subtituloEvento.className = "badge-offline";
+    }
+    if (ultimoRegistro) ultimoRegistro.innerText = "";
+    if (ultimoRespaldo) ultimoRespaldo.innerText = "";
+
+    actualizarMetricasUI();
+    mostrarMensaje(
+      hayDatos 
+        ? "Copia final descargada y dispositivo reiniciado a cero." 
+        : "Dispositivo reiniciado a cero.", 
+      "ok"
+    );
+  }, 300);
 }
 
     function playBeep(tipo) {
