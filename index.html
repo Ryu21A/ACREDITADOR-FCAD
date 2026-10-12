@@ -451,51 +451,32 @@
       if (subtituloEvento) subtituloEvento.innerText = `⚡ ${nombreEventoActivo}`;
     }
 
-function confirmarNuevoEvento() {
-      const hayDatos = padron && Object.keys(padron).length > 0;
-
+    function confirmarNuevoEvento() {
       const codigo = window.prompt(
-        "⚠️ ATENCIÓN: esta acción descargará una copia de seguridad final (si hay datos) y " +
-        "borrará TODOS los datos guardados en este dispositivo.\n\n" +
-        "Para confirmar el cierre y reinicio a cero, escribí el código 2121:"
+        "⚠️ ATENCIÓN: esta acción borra TODOS los datos de acreditación guardados " +
+        "en este dispositivo para este evento (padrón cargado, entradas y salidas registradas) y " +
+        "NO se puede deshacer.\n\n" +
+        "Usalo solo al empezar un evento nuevo, después de haber exportado el CSV " +
+        "del evento anterior.\n\n" +
+        "Para confirmar que estás seguro, escribí el código 2121:"
       );
       if (codigo === null) return;
       if (codigo.trim() !== "2121") {
         mostrarMensaje("Código incorrecto. No se borró ningún dato.", "alerta");
         return;
       }
+      localStorage.removeItem(STORAGE_KEY);
+      padron = {};
+      actualizarMetricasUI();
+      mostrarMensaje("Dispositivo reiniciado para este evento.", "ok");
+    }
 
-      // 1. Descarga automática garantizada antes de limpiar nada
-      if (hayDatos) {
-        exportarCsvAsistencia();
+    function getAudioCtx() {
+      if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } 
+        catch (e) { return null; }
       }
-
-      // 2. Esperamos 400ms para asegurar que el navegador inicie la descarga
-      setTimeout(() => {
-        // Purga absoluta de la memoria del navegador
-        localStorage.clear();
-
-        // Reseteo de memoria
-        padron = {};
-        nombreEventoActivo = "";
-        STORAGE_KEY = "fcad_acreditacion_db_v2::sin_padron";
-
-        // Reseteo visual inmediato en pantalla
-        if (tituloEvento) tituloEvento.innerText = "Mesa de Acreditación";
-        if (subtituloEvento) {
-          subtituloEvento.innerText = "⚡ Sin padrón cargado";
-          subtituloEvento.className = "badge-offline";
-        }
-        if (ultimoRegistro) ultimoRegistro.innerText = "";
-
-        actualizarMetricasUI();
-        mostrarMensaje(
-          hayDatos 
-            ? "Copia final descargada y dispositivo reiniciado a cero." 
-            : "Dispositivo reiniciado a cero.", 
-          "ok"
-        );
-      }, 400);
+      return audioCtx;
     }
 
     function playBeep(tipo) {
@@ -928,26 +909,19 @@ function confirmarNuevoEvento() {
       const link = document.createElement("a");
       link.href = url;
       
-      const idSaneado = (nombreEventoActivo || "evento").toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+      const idSaneado = nombreEventoActivo.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
       link.download = `asistencia_mesa_${idSaneado}_${Date.now()}.csv`;
       
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      // Dejamos 1 segundo antes de revocar la URL para que el navegador no cancele la descarga
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      URL.revokeObjectURL(url);
     }
 
     window.onload = () => {
-      const eventoGuardado = localStorage.getItem("fcad_evento_nombre");
-      if (eventoGuardado) {
-        aplicarEvento(eventoGuardado);
-      } else {
-        if (tituloEvento) tituloEvento.innerText = "Mesa de Acreditación";
-        if (subtituloEvento) subtituloEvento.innerText = "⚡ Sin padrón cargado";
+      if (localStorage.getItem("fcad_evento_nombre")) {
+        aplicarEvento(localStorage.getItem("fcad_evento_nombre"));
       }
-
       const backup = localStorage.getItem(STORAGE_KEY);
       if (backup) {
         try { padron = JSON.parse(backup); } catch (_) { padron = {}; }
