@@ -1,4 +1,5 @@
-const CACHE_NAME = "acreditador-fcad-v1";
+const CACHE_NAME = "acreditador-fcad-v2";
+const TIMEOUT_RED_MS = 3000;
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
@@ -29,13 +30,45 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Pide a la red, pero si no responde en `ms` milisegundos, falla
+// para que se use la copia guardada en caché.
+function fetchConTimeout(req, ms) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("timeout")), ms);
+    fetch(req).then(
+      (res) => { clearTimeout(t); resolve(res); },
+      (err) => { clearTimeout(t); reject(err); }
+    );
+  });
+}
+
 self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(() => {
-        // Retorno de rescate si está offline
-        return caches.match("./index.html");
-      });
-    })
-  );
+  const req = event.request;
+  if (req.method !== "GET") return;
+
+  const esPropio = new URL(req.url).origin === self.location.origin;
+
+  if (esPropio) {
+    // Archivos propios (index.html, manifest.json): network-first.
+    // Con internet siempre toma la versión más nueva y la guarda;
+    // sin internet (o con wifi sin salida) usa la copia en caché.
+    event.respondWith(
+      fetchConTimeout(req, TIMEOUT_RED_MS)
+        .then((res) => {
+          if (res && res.ok) {
+            const copia = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(req, copia));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches.match(req).then((r) => r || caches.match("./index.html"))
+        )
+    );
+  } else {
+    // Librerías y fuentes externas: cache-first (no cambian).
+    event.respondWith(
+      caches.match(req).then((r) => r || fetch(req))
+    );
+  }
 });
